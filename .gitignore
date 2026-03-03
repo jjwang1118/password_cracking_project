@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+.venv
+venv/
+
+# Large dataset files (too large for GitHub)
+datasets_filtered/sister_password_count.jsonl
+datasets_filtered/org.json
+
+# Large dataset directory - ignore actual data files but preserve directory structure
+datasets_filtered/CompilationOfManyBreaches_filtered/**
+!datasets_filtered/CompilationOfManyBreaches_filtered/**/
+!datasets_filtered/CompilationOfManyBreaches_filtered/**/.gitkeep

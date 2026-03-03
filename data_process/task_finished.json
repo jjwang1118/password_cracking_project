@@ -1,0 +1,17 @@
+{
+    "valid_password_num": {
+        "finished": true
+    },
+    "len_distribution_analysis": {
+        "finished": true,
+        "folder_path": "None"
+    },
+    "org_domain_analysis": {
+        "finished": true,
+        "folder_path": "None"
+    },
+    "sister_password_analysis": {
+        "finished": true,
+        "folder_path": "None"
+    }
+}
