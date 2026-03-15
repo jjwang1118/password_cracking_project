@@ -13,7 +13,6 @@ venv/
 
 # Large dataset files (too large for GitHub)
 datasets_filtered/sister_password_count.jsonl
-datasets_filtered/org.json
 datasets_filtered/sister_password/*
 !datasets_filtered/sister_password/.gitkeep
 
