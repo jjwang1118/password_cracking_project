@@ -14,6 +14,7 @@ venv/
 # Large dataset files (too large for GitHub)
 datasets_filtered/sister_password_count.jsonl
 datasets_filtered/org.json
+datasets_filtered/sister_password/
 
 # Large dataset directory - ignore actual data files but preserve directory structure
 datasets_filtered/CompilationOfManyBreaches_filtered/**

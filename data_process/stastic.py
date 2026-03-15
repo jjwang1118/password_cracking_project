@@ -140,17 +140,82 @@ def len_analysis(root: str = None):
         json.dump(length_distribution, f, ensure_ascii=False, indent=4)
 
 
-def pair_sister(data_root: str = None, n_workers: int = 4, sort_buffer: str = '512M'):
+def _shard_key(account: str) -> str:
+    """依 account 首字元決定分片檔名 key（a-z / 0-9 / _other）。"""
+    if not account:
+        return "_other"
+    ch = account[0].lower()
+    if ch.isalpha() or ch.isdigit():
+        return ch
+    return "_other"
+
+
+def _shard_jsonl(src_path: Path, shard_dir: Path, flush_interval: int = 5000):
+
+    shard_dir.mkdir(exist_ok=True)
+    handles: dict[str, object] = {}
+
+    def get_handle(key: str):
+        if key not in handles:
+            handles[key] = open(
+                shard_dir / f"{key}.jsonl", "w",
+                encoding="utf-8", buffering=1 << 20,
+            )
+        return handles[key]
+
+    total = 0
+    errors = 0
+
+    try:
+        with open(src_path, "r", encoding="utf-8") as fin:
+            for line in fin:
+                line = line.rstrip("\n")
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    errors += 1
+                    continue
+
+                key = _shard_key(obj.get("account", ""))
+                fout = get_handle(key)
+                fout.write(line + "\n")
+
+                total += 1
+                if total % flush_interval == 0:
+                    fout.flush()
+                if total % 1_000_000 == 0:
+                    print(f"  [shard] 已處理 {total:,} 行 ...", flush=True)
+    finally:
+        for fh in handles.values():
+            fh.close()
+
+    print(f"  [shard] 完成！共 {total:,} 行，跳過 {errors:,} 行解析錯誤。")
+    print(f"  [shard] 分片輸出至: {shard_dir}")
+    for p in sorted(shard_dir.glob("*.jsonl")):
+        size_mb = p.stat().st_size / (1024 * 1024)
+        if size_mb >= 1024:
+            print(f"    {p.name:>12s}  {size_mb / 1024:.2f} GB")
+        else:
+            print(f"    {p.name:>12s}  {size_mb:.1f} MB")
+
+
+def pair_sister(data_root: str = None, n_workers: int = 4,
+                sort_buffer: str = '512M', shard: bool = False):
     """
     三階段 disk-based 實作，記憶體用量 O(1)：
       1. 並行讀取 CSV → 各自寫成獨立暫存 TSV（ProcessPoolExecutor）
       2. 外部多核排序（sort --parallel）
       3. 串流 groupby → 批次寫出 JSONL
+      4.（可選）依 account 首字元分片，避免單檔過大 OOM
 
     Parameters
     ----------
     n_workers   : 並行 worker 數，預設 CPU 核心數 - 1
     sort_buffer : 傳給 sort --buffer-size，預設 '512M'
+    shard       : 若為 True，完成後將 JSONL 按 account 首字元分片至
+                  sister_password_shards/ 目錄（a-z, 0-9, _other）
     """
     if data_root is None:
         cfg = config()
@@ -231,6 +296,12 @@ def pair_sister(data_root: str = None, n_workers: int = 4, sort_buffer: str = '5
             fout.writelines(buf)
 
     sorted_path.unlink()
+
+    # ── 第四步（可選）：依首字元分片，避免單檔 OOM ──────────────────
+    if shard:
+        print("開始分片 sister_password_count.jsonl ...")
+        shard_dir = out_dir / "sister_password_shards"
+        _shard_jsonl(out_path, shard_dir)
                     
 
 
