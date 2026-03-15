@@ -13,6 +13,10 @@ venv/
 
 # Large dataset files (too large for GitHub)
 datasets_filtered/sister_password_count.jsonl
+
+# Model files exceeding GitHub LFS 2GB limit
+model/Llama-3.2-3B-Instruct/model-00001-of-00002.safetensors
+model/Llama-3.2-3B-Instruct/original/consolidated.00.pth
 datasets_filtered/sister_password/*
 !datasets_filtered/sister_password/.gitkeep
 
