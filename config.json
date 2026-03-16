@@ -2,9 +2,11 @@
     "seed":42,
     "dataset_path": "datasets_filtered",
     "result_path": "results",
+    "expected_ratio": 0.5,
+    "split_ratio":0.8,
     "train":{
             "train_config":{
-                "model_name": "llama-8b",
+                "model_name": "Llama-3.2-3B-Instruct",
                 "output_dir" : "checkpoints/",
                 "per_device_train_batch_size" : 4,
                 "gradient_accumulation_steps" : 64,
@@ -36,7 +38,7 @@
     },
     "eval":{
         "config":{
-            "model_name": "llama-8b",
+            "model_name": "Llama-3.2-3B-Instruct",
             "batch_size": 1000,
             "prompmt_template_id": 0,
             "vocab_limit": true,
