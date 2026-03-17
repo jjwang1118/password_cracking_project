@@ -1,8 +1,13 @@
-import pandas as  pd
 import os
 import json
 from pathlib import Path
-from data_process.catch_split_data import split_train_test ,catch_data
+from data_process.catch_split_data import (
+    split_train_test,
+    catch_data,
+    count_password_length_distribution,
+)
+from datasets import load_dataset
+
 
 
 if __name__ == "__main__":
@@ -11,7 +16,8 @@ if __name__ == "__main__":
         config = json.load(f)
     
     seed = config["seed"]
-    dataset_path = f"{Path.home()}/{config["leak_dataset_path"]}/sister_password"
+    project_root = Path.home() / "projects" / "password_cracking_project"
+    dataset_path = str(project_root / config["dataset_path"])
 
     if not os.path.exists(os.path.join(dataset_path,"train")) or not os.path.exists(os.path.join(dataset_path,"test")):
         os.makedirs(os.path.join(dataset_path,"split"), exist_ok=True)
@@ -23,36 +29,26 @@ if __name__ == "__main__":
         print("train/test files already exist, skipping split.")
     else:
         print("Splitting data into train/test sets...")
-        
 
-        train_test_dataset=catch_data(config["expected_ratio"], dataset_path)
-        split_train_test(train_test_dataset,dataset_path, config["expected_ratio"], seed, dataset_path)
+        catch_data_path = os.path.join(dataset_path, "split", "catch_data.jsonl")
+        if os.path.exists(catch_data_path) and os.path.getsize(catch_data_path) > 0:
+            print("catch_data.jsonl already exists, skipping catch_data step.")
+            train_test_dataset = load_dataset("json", data_files=catch_data_path)
+        else:
+            train_test_dataset = catch_data(config["expected_ratio"], dataset_path)
+
+        split_train_test(train_test_dataset, dataset_path, config["split_ratio"], seed)
+
 
     if  not os.path.exists(os.path.join(dataset_path,"split","length_distribution.json")):
         print("Calculating length distribution...")
-        # 統計長度分布
         length_distribution = {}
-        with open(f"{dataset_path}/split/train_data.jsonl", "r", encoding="utf-8-sig") as f:
-            content=json.load(f)
-            length_distribution["train"] = {}
-            for item in content:
-                password = item["password"]
-                length = len(password)
-                if length in length_distribution["train"]:
-                    length_distribution["train"][length] += 1
-                else:
-                    length_distribution["train"][length] = 1
-        
-        with open(f"{dataset_path}/split/test_data.jsonl", "r", encoding="utf-8-sig") as f:
-            content=json.load(f)
-            length_distribution["test"] = {}
-            for item in content:
-                password = item["password"]
-                length = len(password)
-                if length in length_distribution["test"]:
-                    length_distribution["test"][length] += 1
-                else:
-                    length_distribution["test"][length] = 1
+        length_distribution["train"] = count_password_length_distribution(
+            f"{dataset_path}/split/train_data.jsonl"
+        )
+        length_distribution["test"] = count_password_length_distribution(
+            f"{dataset_path}/split/test_data.jsonl"
+        )
         
         with open(f"{dataset_path}/split/length_distribution.json", "w", encoding="utf-8-sig") as f:
             json.dump(length_distribution, f, ensure_ascii=False, indent=4)
