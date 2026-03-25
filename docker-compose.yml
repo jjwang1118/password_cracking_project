@@ -1,0 +1,57 @@
+services:
+
+  # ── 訓練任務 ──────────────────────────────────────────────────
+  train:
+    build: .
+    image: pw-cracking:latest
+    command: python train.py
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      # 大型資料/模型不打包進 image，執行時掛載
+      - ./model:/workspace/model:ro
+      - ./datasets_filtered:/workspace/datasets_filtered
+      - ./checkpoints:/workspace/checkpoints
+      - ./logs:/workspace/logs
+    ipc: host          # 多 GPU DataLoader shared memory 需要
+    ulimits:
+      memlock: -1
+      stack: 67108864
+
+  # ── 評估任務 ──────────────────────────────────────────────────
+  eval:
+    build: .
+    image: pw-cracking:latest
+    command: python eval.py
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./model:/workspace/model:ro
+      - ./datasets_filtered:/workspace/datasets_filtered:ro
+      - ./checkpoints:/workspace/checkpoints:ro
+      - ./gen:/workspace/gen
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864
+
+  # ── 標記任務 ──────────────────────────────────────────────────
+  label:
+    build: .
+    image: pw-cracking:latest
+    command: python label.py
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      - ./model:/workspace/model:ro
+      - ./datasets_filtered:/workspace/datasets_filtered
+    ipc: host
+    ulimits:
+      memlock: -1
+      stack: 67108864

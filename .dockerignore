@@ -1,0 +1,39 @@
+# ── 大型資料與模型（透過 volume 掛載，不打包進 image）──
+model/
+datasets_filtered/
+checkpoints/
+checkpoint/
+gen/
+logs/
+
+# ── Git ────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ── Python 快取 ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── 虛擬環境 ───────────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Jupyter / IPython ─────────────────────────────────
+*.ipynb
+.ipynb_checkpoints/
+
+# ── 系統雜檔 ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── 測試 / CI ──────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
