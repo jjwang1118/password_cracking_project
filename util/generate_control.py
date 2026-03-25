@@ -1,4 +1,3 @@
-# 修正 1：移除無效的 Optimizer import；修正 DataLoader 路徑 torch.nn.data → torch.utils.data
 from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaForCausalLM
 from transformers import get_linear_schedule_with_warmup
 import torch
@@ -8,6 +7,12 @@ import json
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
+# 主要流程:
+# 為tranformers 每一層 k/v注入 prefix
+# 凍結模型
+# 寫入k/v
+# 初始化和變動k/v cache的forward
+# loss: lm loss + contrastive loss + kl loss
 
 def hiddenhead(config_path):
     with open(config_path, "r") as f:

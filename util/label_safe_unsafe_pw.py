@@ -11,12 +11,9 @@ def cosine_similarity(account:str,password:str,tokenizer,gram:int=2):
     sos = tokenizer.bos_token or ""
     eos = tokenizer.eos_token or ""
 
-
-
     account_set=set()
     password_set=set()
     
-
     for idx in range(0, len(account) - gram + 1):
         account_set.add(account[idx:idx+gram])
 
