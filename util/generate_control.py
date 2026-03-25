@@ -194,6 +194,7 @@ class llamaModel_control(LlamaForCausalLM):
     def get_past_from_prefix(self, control_ids):
         """將 prefix_params 轉換為 past_key_values 格式"""
         """
+            建kv cache
             past_key_values = [
                 (key_layer_0, val_layer_0),   # shape: (batch, heads, prefix_len, head_dim)
                 (key_layer_1, val_layer_1),
