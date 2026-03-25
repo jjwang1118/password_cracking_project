@@ -4,6 +4,7 @@ import torch
 from torch.utils.data import DataLoader
 from util.datacollector import PasswordDataset
 import json
+import yaml
 from pathlib import Path
 from torch.utils.tensorboard import SummaryWriter
 
@@ -57,8 +58,8 @@ class llamaModel_control(LlamaForCausalLM):
                     self.parameterlist.append(param)
 
     def _load_config(self):
-        with open("config.json", "r") as f:
-            return json.load(f)
+        with open("config.yaml", "r") as f:
+            return yaml.safe_load(f)
 
     def load_model(self, model_path):
         # self 本身就是模型，只需凍結非 prefix 的參數

@@ -1,0 +1,76 @@
+seed: 42
+dataset_path: datasets_filtered
+result_path: results
+expected_ratio: 0.0001
+split_ratio: 0.2
+
+train:
+  prompt_template_id: 0
+  train_config:
+    model_name: Llama-3.2-3B-Instruct
+    model_path: model
+    output_dir: "checkpoints/"
+    per_device_train_batch_size: 4
+    gradient_accumulation_steps: 64
+    weight_decay: 0.01
+    learning_rate: 5.0e-4
+    num_train_epochs: 3
+    warmup_ratio: 0.1
+    logging_steps: 1
+    save_steps: 200
+    data_seed: 42
+    seed: 42
+    bf16: true
+    eval_strategy: steps
+    eval_steps: 100
+    per_device_eval_batch_size: 16
+    eval_delay: 1
+    optim: adamw_torch
+    label_smoothing_factor: 0
+  lora_config:
+    r: 16
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+    lora_alpha: 32
+    lora_dropout: 0.2
+    bias: none
+    init_lora_weights: true
+  prompt_idx: 0
+
+eval:
+  config:
+    model_name: Llama-3.2-3B-Instruct
+    batch_size: 1000
+    prompmt_template_id: 0
+    vocab_limit: true
+    precistion: half
+    eos_threshold: 0.001
+    max_guess_number: 1000
+    output_path: gen
+
+label:
+  model_name: Llama-3.2-3B-Instruct
+  safe_threshold: 0.5
+  output_path: datasets_filtered/labeled
+  expected_ratio: 0.3
+  seed: 42
+  labels:
+    safe: 0
+    unsafe: 1
+  train_test_dataset:
+    train_path: datasets_filtered/labeled/train_data.csv
+    test_path: datasets_filtered/labeled/test_data.csv
+  prefix_len: 10
+  epochs: 100
+  dropout: 0.2
+  batch_size: 1
+  grad_acc: 2
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  loss:
+    lm_loss: 1
+    consta_loss: 4
+    kl_loss: 1.6

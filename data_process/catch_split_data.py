@@ -1,13 +1,14 @@
 import os
 import json
+import yaml
 import random
 from datasets import DatasetDict, load_dataset
 
 
 
 def download_config():
-    with open("config.json","r") as f:
-        config=json.load(f)
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
     return config
 
 

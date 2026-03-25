@@ -1,7 +1,7 @@
 from functools import partial
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_dataset
-import json
+import yaml
 from transformers import DataCollatorForSeq2Seq
 from peft import LoraConfig, get_peft_model
 from transformers import TrainingArguments, Trainer
@@ -13,8 +13,8 @@ import torch
 if __name__ == "__main__":
 
     # 載入參數
-    with open("config.json","r") as f:
-        config=json.load(f)
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
     prompt_idx=config["train"]["prompt_template_id"]
     train_config=config["train"]
     lora=config["train"]["lora_config"]

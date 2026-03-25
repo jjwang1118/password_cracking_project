@@ -1,6 +1,7 @@
 from util.label_safe_unsafe_pw import cosine_similarity, all_lower,all_upper, all_digit
 from transformers import AutoTokenizer
 import json
+import yaml
 from pathlib import Path
 import random
 import os
@@ -9,8 +10,8 @@ import pandas as pd
 
 
 if __name__ == "__main__":
-    with open("config.json","r") as f:
-        config=json.load(f)
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
     model_name=config["eval"]["config"]["model_name"]
     local_model_path = Path("model") / model_name
     model_source = str(local_model_path) if local_model_path.exists() else model_name

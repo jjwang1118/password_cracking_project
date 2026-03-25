@@ -1,5 +1,6 @@
 import os
 import json
+import yaml
 from pathlib import Path
 from data_process.catch_split_data import (
     split_train_test,
@@ -11,9 +12,9 @@ from datasets import load_dataset
 
 
 if __name__ == "__main__":
-    config_path = Path.home() / "projects" / "password_cracking_project" / "config.json"
+    config_path = Path.home() / "projects" / "password_cracking_project" / "config.yaml"
     with open(config_path, "r") as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
     
     seed = config["seed"]
     project_root = Path.home() / "projects" / "password_cracking_project"

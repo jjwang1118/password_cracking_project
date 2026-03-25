@@ -1,5 +1,6 @@
 import torch
 import json
+import yaml
 import os
 from pathlib import Path
 from tqdm import tqdm
@@ -38,8 +39,8 @@ def decode_password(seq_tensor: torch.Tensor, inv_vocab: dict, eos_id: int) -> s
 
 
 if __name__ == "__main__":
-    with open("config.json", "r") as f:
-        config = json.load(f)
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
     eval_config      = config["eval"]["config"]
     model_name       = eval_config["model_name"]
