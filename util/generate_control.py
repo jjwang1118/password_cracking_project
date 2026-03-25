@@ -202,6 +202,7 @@ class llamaModel_control(LlamaForCausalLM):
             ]       
         """
         past = []
+        control_ids = [int(c.item()) if isinstance(c, torch.Tensor) else c for c in control_ids]
         for i in range(self.layers):
             key_stack, val_stack = [], []
             for control_id in control_ids:
