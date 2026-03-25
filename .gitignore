@@ -24,3 +24,6 @@ datasets_filtered/sister_password/*
 datasets_filtered/CompilationOfManyBreaches_filtered/**
 !datasets_filtered/CompilationOfManyBreaches_filtered/**/
 !datasets_filtered/CompilationOfManyBreaches_filtered/**/.gitkeep
+
+# Checkpoint optimizer states (51MB each, over GitHub 50MB warning threshold)
+checkpoints/**/optimizer.pt
