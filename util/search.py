@@ -256,6 +256,8 @@ def contrastive_search(
     use_contrastive: bool = True,
     contrastive_alpha: float = 0.6,
     top_k: int = None,
+    use_prefix_control: bool = False,
+    control_id: int = None
 ):
     """
     Contrastive Search: 使用 threshold-based 搜索生成大量候選，再用 contrastive penalty 重新排序。
@@ -274,7 +276,8 @@ def contrastive_search(
         use_contrastive: 是否使用 contrastive reranking
         contrastive_alpha: contrastive penalty 強度
         top_k: 只返回前 k 個結果
-        
+        use_prefix_control: 是否使用 prefix 控制
+        control_id: prefix 控制的 ID
     Returns:
         candidates: 排序後的候選列表
     """
@@ -286,6 +289,7 @@ def contrastive_search(
 
     input_ids = input_ids.reshape(1, -1).to(device=device)
     reorder_info_cache_index = torch.zeros(batch_size, device=device, dtype=torch.int)
+    prefix_cache = model.get_past_from_prefix([control_id]) if use_prefix_control else None
 
     # 如果 beam_width_list 為 None，使用 max_length 和預設 beam_width 自動生成
     if beam_width_list is None:
@@ -297,8 +301,11 @@ def contrastive_search(
             search_width_list = beam_width_list
     
     max_length = len(beam_width_list)
+    #.shape[2] key_0  (batch, heads, prefix_len, head_dim)
+    prefix_len = prefix_cache[0][0].shape[2] if use_prefix_control else 0 
+    # 注入 prefix 後，info_cache 的序列長度是 prefix_len + prompt_len
     pw_silce_index = torch.arange(
-        input_ids.shape[1], input_ids.shape[1] + max_length, device=device, dtype=torch.int
+        prefix_len+input_ids.shape[1], prefix_len+input_ids.shape[1] + max_length, device=device, dtype=torch.int
     )
     vocab_tensor = torch.tensor(vocab, device=device, dtype=torch.int)
     vocab_size = len(vocab)
@@ -319,14 +326,16 @@ def contrastive_search(
             max_candidates = beam_width_list[i-1] * (vocab_size - 1)
             search_width_list[i] = min(search_width_list[i], max_candidates)
 
+
     #Get the auxiliary information  cache
     outputs = model.forward(
         input_ids=input_ids,
-        past_key_values=None,
+        past_key_values=prefix_cache ,
         use_cache=True,
         output_attentions=False,
         output_hidden_states=True,
     )
+    info_cache = outputs.past_key_values
     logits = remap_logits(vocab_tensor, outputs.logits)[:, -1, :]
     info_cache = outputs.past_key_values
     
@@ -390,6 +399,9 @@ def contrastive_search(
                 output_attentions=False,
                 output_hidden_states=True,  # 啟用 hidden states 輸出
             )
+
+
+
             del cache
   
             # 提取當前 batch 的 hidden states [batch_size, hidden_dim]
@@ -397,7 +409,7 @@ def contrastive_search(
             
             # 計算對比懲罰 [batch_size]
             # 只有 beam_width 內的 beam 需要 penalty（search_width 中額外的部分不需要）
-            if i < beam_forward_num:
+            if use_contrastive and i < beam_forward_num:
                 penalty = beam.compute_contrastive_penalty(current_hidden, current_beam_indices, contrastive_alpha)
             else:
                 # search_width 中額外的 beam 不需要計算 penalty（不會保存到 word_probs）
@@ -414,7 +426,8 @@ def contrastive_search(
                 word_probs = torch.cat([word_probs, batch_word_probs[:, :-1]], dim=0)
                 pw_past_key_values = _merge_cache(pw_past_key_values, batch_pw_past_key_values)
                 # 收集 beam_width 內所有current hidden states (未篩選)
-                hidden_states_batch.append(current_hidden)
+                if use_contrastive:
+                    hidden_states_batch.append(current_hidden)
 
             del outputs
 

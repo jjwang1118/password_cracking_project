@@ -45,8 +45,8 @@ if __name__ == "__main__":
     eval_config      = config["eval"]["config"]
     model_name       = eval_config["model_name"]
     batch_size       = eval_config["batch_size"]
-    prompt_tmpl_id   = eval_config["prompmt_template_id"]
-    precision        = eval_config["precistion"]
+    prompt_tmpl_id   = eval_config["prompt_template_id"]
+    precision        = eval_config["precision"]
     eos_threshold    = eval_config["eos_threshold"]
     max_guess_number = eval_config["max_guess_number"]
 

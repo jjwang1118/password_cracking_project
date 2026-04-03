@@ -2,7 +2,7 @@ import json
 def _get_indice(id):
     if id == 0:
         return ("As a targeted password guessing model, your task is to utilize the provided account information to guess the password.")
-    return ValueError
+    raise ValueError(f"Unknown prompt id: {id}")
 
 
 def prompt_convert(data:dict,prompt_template:str):

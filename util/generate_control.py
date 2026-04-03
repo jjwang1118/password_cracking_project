@@ -61,7 +61,7 @@ class llamaModel_control(LlamaForCausalLM):
         with open("config.yaml", "r") as f:
             return yaml.safe_load(f)
 
-    def load_model(self, model_path):
+    def load_model(self):
         # self 本身就是模型，只需凍結非 prefix 的參數
         for name, param in self.named_parameters():
             param.requires_grad = name.startswith("parameterlist")
@@ -75,7 +75,7 @@ class llamaModel_control(LlamaForCausalLM):
         eff_batch = self.batch_size * self.grad_acc
         total_steps = (len(dataset) // eff_batch) * config["label"].get("epochs", 1)
 
-        self.load_model(Path("model") / config["label"]["model_name"])
+        self.load_model()
         optimizer = torch.optim.AdamW(
             [p for p in self.parameters() if p.requires_grad],
             lr=self.lr,
@@ -122,13 +122,16 @@ class llamaModel_control(LlamaForCausalLM):
 
             loss = torch.tensor(0.0, device=device)
 
+            # 正確 control：最小化 cross entropy（生成正確密碼）
             _, output = self(pw, control_id=control_id)
             loss = loss + self.loss_function("cross_entropy", output, pw) * self.label_config.get("loss", {}).get("lm_loss", 1)
 
             # 錯誤 control（翻轉：0→1, 1→0）的 forward（contrastive loss）
+            # 目標：最大化 NLL（降低生成正確密碼的概率）= 最小化 -NLL
             wrong_control_id = 1 - control_id
             _, wrong_output = self(pw, control_id=wrong_control_id)
-            loss = loss + self.loss_function("nll", wrong_output, pw) * self.label_config.get("loss", {}).get("consta_loss", 1)
+            wrong_nll = self.loss_function("nll", wrong_output, pw)
+            loss = loss - wrong_nll * self.label_config.get("loss", {}).get("consta_loss", 1)  # 注意：減號
 
             # 無 prefix 的 forward（KL loss，保持非密碼相關生成行為不變）
             self.eval()
@@ -184,17 +187,37 @@ class llamaModel_control(LlamaForCausalLM):
         return checkpoint_list, checkpoint_list["avg_eval_loss"]
 
     def loss_function(self, loss_type, inputs, targets):
-        # 原始程式碼有 weight 參數，本專案不需要，已刪除
+        """
+        Args:
+            inputs: (batch, seq_len, vocab_size) - logits or reference logits for KL
+            targets: (batch, seq_len) - token ids, or reference logits for KL
+        """
         if loss_type == 'cross_entropy':
+            # CrossEntropyLoss expects (N, C) and (N,)
             loss_fct = torch.nn.CrossEntropyLoss(reduction='none')
+            inputs_flat = inputs.view(-1, inputs.size(-1))  # (batch*seq_len, vocab_size)
+            targets_flat = targets.view(-1)  # (batch*seq_len,)
+            loss = loss_fct(inputs_flat, targets_flat)
+            loss = loss.view(targets.size(0), -1)  # (batch, seq_len)
+            
         elif loss_type == 'nll':
+            # NLLLoss expects log probabilities
             loss_fct = torch.nn.NLLLoss(reduction='none')
+            log_probs = torch.nn.functional.log_softmax(inputs, dim=-1)  # (batch, seq_len, vocab_size)
+            log_probs_flat = log_probs.view(-1, log_probs.size(-1))
+            targets_flat = targets.view(-1)
+            loss = loss_fct(log_probs_flat, targets_flat)
+            loss = loss.view(targets.size(0), -1)  # (batch, seq_len)
+            
         elif loss_type == 'kl':
+            # KLDivLoss expects (log_probs, log_probs) with log_target=True
             loss_fct = torch.nn.KLDivLoss(log_target=True, reduction='none')
-
-        loss = loss_fct(inputs, targets)
-        if loss_type == 'kl':
-            loss = loss.sum(dim=1)
+            # inputs: prediction logits, targets: reference logits
+            log_probs_input = torch.nn.functional.log_softmax(inputs, dim=-1)
+            log_probs_target = torch.nn.functional.log_softmax(targets, dim=-1)
+            loss = loss_fct(log_probs_input, log_probs_target)
+            loss = loss.sum(dim=-1)  # sum over vocab_size → (batch, seq_len)
+        
         return loss.mean()
 
     def get_past_from_prefix(self, control_ids):
@@ -231,6 +254,13 @@ class llamaModel_control(LlamaForCausalLM):
             "past_key_values": past,
             "use_cache": kwargs.get("use_cache"),
         }
+    def forward(self, input_ids, **kwargs):
+        control_id = kwargs.pop('control_id', None)  # 攔截，不讓父類看到
+        if control_id is not None:
+            control_ids = [int(c.item()) if isinstance(c, torch.Tensor) else c
+                        for c in control_id]
+            kwargs['past_key_values'] = self.get_past_from_prefix(control_ids)
 
-
+        outputs = super().forward(input_ids=input_ids, **kwargs)
+        return kwargs.get('past_key_values'), outputs.logits
 

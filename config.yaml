@@ -3,7 +3,8 @@ dataset_path: datasets_filtered
 result_path: results
 expected_ratio: 0.0001
 split_ratio: 0.2
-
+use_prefix_control: true
+use_contrastive_search: true
 train:
   prompt_template_id: 0
   train_config:
